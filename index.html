@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <title>重生之我是七彩大蟒蛇</title>   
+    <style>
+			#canvas{
+				border: 1px solid;
+  			margin: auto;
+			}
+    </style>
+</head>
+<body>
+		<div style="text-align: center;">
+			<canvas id="canvas" width="900" height="750"></canvas>
+		</div>
+
+
+    <script type="text/javascript">
+			init()
+			// 随机颜色
+			function randomColor () {
+				const r = Math.round(Math.random()*255)
+				const g = Math.round(Math.random()*255)
+				const b = Math.round(Math.random()*255)
+				return `rgb(${r}, ${g}, ${b})`
+			}
+
+			function init () {
+				const canvas = document.getElementById('canvas')
+				start(canvas)
+			}
+
+			function start (canvas) {
+				const ctx = canvas.getContext('2d')
+				const { width, height } = canvas
+				let isGame = false
+
+				drawTitle()
+
+				function drawTitle () {
+					ctx.clearRect(230, 170, 480, 70)
+
+					ctx.textAlign = 'center'
+					ctx.font = '40px serif'
+					const text = '重生之我是七彩大蟒蛇'
+					const textX = width / 2 - text.length / 2 * 40 + 20
+					for (let i in text) {
+						ctx.fillStyle = randomColor()
+						ctx.fillText(text[i], textX + i * 40, 220)
+						ctx.strokeStyle = randomColor()
+						ctx.strokeText(text[i], textX + i * 40, 220)
+					}
+					if (!isGame) {
+						setTimeout(() => {
+							requestAnimationFrame(drawTitle)
+						}, 50)
+					}
+				}
+
+				// 操作按钮
+				class Operation {
+					constructor () {
+						const ops = ['开始游戏', '历史成绩']
+						const initY = 300
+						this.btnList = []
+						ctx.fillStyle = '#000'
+						ctx.strokeStyle = '#000'
+
+						for (let i = 0; i < ops.length; i++) {
+							this.btnList.push({
+								text: ops[i],
+								x: width / 2 - 100,
+								y: initY + i * 80,
+								width: 200,
+								height: 60
+							})
+						}
+					}
+
+					draw () {
+						for (let i = 0; i < this.btnList.length; i++) {
+							const {x, y, text} = this.btnList[i]
+							roundRect(ctx, x, y,200,60,10)
+							roundRect(ctx, x + 5, y + 5 ,190,50,8)
+							ctx.textAlign = 'center'
+							ctx.textBaseline = 'middle'
+							ctx.font = '20px serif'
+							ctx.fillText(text, width / 2, y + 30)
+						}
+					}
+    		}
+
+				const opts = new Operation()
+				opts.draw()
+
+				canvas.onclick = (e) => {
+					const {left, top} = canvas.getBoundingClientRect();
+					// 计算在canvas中点击的坐标 -1为boder的宽度
+					const x = e.clientX - left - 1
+					const y = e.clientY - top - 1
+
+					const btn = opts.btnList.find((item) => {
+						const {x: dx, y: dy, width, height} = item
+						return x > dx && x < dx + width && y > dy && y < dy + height
+					})
+					console.log(x,y, btn)
+					if (btn && btn.text === '开始游戏') {
+						initSnake(canvas, opts)
+						isGame = true
+					}
+				}
+  		}
+
+			  // 玩蛇
+  		function initSnake (canvas, opts) {
+				const ctx = canvas.getContext('2d')
+				const { width, height } = canvas
+				ctx.clearRect(0, 0, width, height)
+
+				// 绘制类
+				class Rect {
+					constructor (x, y, size, color) {
+						this.x = x
+						this.y = y
+						this.color = color
+						this.size = size
+					}
+
+					draw () {
+						ctx.beginPath()
+						ctx.fillStyle = this.color
+						ctx.fillRect(this.x,this.y, this.size, this.size)
+					}
+				}
+
+				// 🐍
+				class Snake {
+					constructor (len) {
+						// 初始长度
+						this.len = len
+						// 蛇头
+						this.snakeHead = {}
+						// 蛇的身体
+						this.snakeArray = []
+						this.size = 15
+						// 方向
+						this.direction = 2
+						const list = []
+
+						for (let i = 0; i < this.len; i++) {
+							const rect = new Rect(i * this.size, this.size, this.size, randomColor())
+							list.splice(0, 0, rect);
+						}
+						
+						this.snakeHead = list[0]
+						this.snakeHead.color = '#ff4800'
+						this.snakeArray = list
+					}
+
+					draw () {
+						// 绘制蛇身
+						for (let i = 0; i < this.snakeArray.length; i++) {
+							this.snakeArray[i].draw()
+						}
+					}
+
+					move () {
+						var rect = new Rect(this.snakeHead.x, this.snakeHead.y,
+						this.size, randomColor());
+						this.snakeArray.splice(1, 0, rect);
+						
+						if (snake.snakeHead.x == food.x && snake.snakeHead.y == food.y) {
+							food = randomFood(snake)
+						} else {
+							this.snakeArray.pop();
+						}
+
+						// 根据方向，控制蛇头的坐标
+						switch (this.direction) {
+								case 0:
+										this.snakeHead.x -= this.size
+										break
+								case 1:
+										this.snakeHead.y -= this.size
+										break
+								case 2:
+										this.snakeHead.x += this.size
+										break
+								case 3:
+										this.snakeHead.y += this.size
+										break
+						}
+
+						boundary(snake)
+					}
+    		}
+
+				document.onkeydown = function (e) {
+					// 键盘事件
+					e = e || window.event
+					// 左37  上38  右39  下40
+					switch (e.keyCode) {
+						case 37:
+							snake.direction = snake.direction === 2 ? 2 : 0
+							break
+						case 38:
+							snake.direction = snake.direction === 3 ? 3 : 1
+							break
+						case 39:
+							snake.direction = snake.direction === 0 ? 0 : 2
+							break
+						case 40:
+							snake.direction = snake.direction === 1 ? 1 : 3
+							break
+					}
+				}
+
+				// 生成随机食物
+				function randomFood (snake) {
+					//判定食物是否出现在蛇身上，如果是重合，则重新生成一遍
+					let isOnSnake = true;
+					let rect
+
+					//设置食物出现的随机位置
+					while (isOnSnake) {
+						isOnSnake = false;
+						const x = Math.floor(Math.random() * (width / snake.size - 10)) * snake.size
+						const y = Math.floor(Math.random() * (width / snake.size - 10)) * snake.size
+						rect = new Rect(x, y, 15, "red");
+						for (let i = 0; i < snake.snakeArray.length; i++) {
+								if (snake.snakeArray[i].x == rect.x && snake.snakeArray[i].y == rect.y) {
+										//如果判定重合，将其设置为true，使随机数重给
+										isOnSnake = true;
+										break;
+								}
+						}
+					}
+					return rect
+				}
+
+				// 边界判断
+				function boundary (snake) {
+					// 是否碰到左右边界
+					const xLimit = snake.snakeHead.x < 0 || snake.snakeHead.x >= width - snake.size;
+					// 是否碰到上下边界
+					const yLimit = snake.snakeHead.y <= 0 || snake.snakeHead.y >= height - snake.size
+					// 是否撞到蛇身
+					const hitSelf = snake.snakeArray.find((item, index) => {
+						return index > 0 && snake.snakeHead.x === item.x && snake.snakeHead.y === item.y
+					})
+					return xLimit || yLimit || hitSelf
+				}
+    
+				// 分数
+				function fraction (snake) {
+					ctx.fillStyle = '#000'
+					ctx.font = '15px serif'
+					ctx.fillText('分数', width - 30, 20)
+					ctx.font = '20px serif'
+					ctx.fillText(snake.snakeArray.length - snake.len, width - 30, 37)
+				}
+
+				// 游戏结束
+				function gameover (snake) {
+					ctx.font = '40px serif'
+					ctx.fillText('游戏结束', width / 2, 200)
+					ctx.font = '25px serif'
+					ctx.fillText('分数：'+ String(snake.snakeArray.length - snake.len), width / 2, 260)
+
+					ctx.strokeStyle = '#000'
+					roundRect(ctx, width / 2 - 80, 320, 160, 50, 10)
+					roundRect(ctx, width / 2 - 75, 325, 150, 40, 8)
+					ctx.font = '20px serif'
+					ctx.fillText('重新开始', width / 2, 345)
+					console.log(opts)
+					if (opts.btnList.every(item => item.text !== '重新开始')) {
+						opts.btnList.push({ text: '重新开始', x: width / 2 - 80,
+						y: 320,
+						width: 160,
+						height: 50})
+					}
+				}
+
+				const snake = new Snake(1)
+				snake.direction = 2
+				let food = randomFood(snake)
+
+				animate()
+
+				function animate () {
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					food.draw();
+					snake.move();
+					snake.draw();
+					fraction(snake)
+
+					if (boundary(snake)) {
+						gameover(snake)
+						return false
+					}
+
+					setTimeout(() => {
+						requestAnimationFrame(animate)
+					}, 100)
+				}
+  		}
+
+			// 圆角矩形
+			function roundRect (ctx, x, y, w, h, r) {
+				if (w < 2 * r) r = w / 2;
+				if (h < 2 * r) r = h / 2;
+				ctx.beginPath();
+				ctx.moveTo(x+r, y);
+				ctx.arcTo(x+w, y, x+w, y+h, r);
+				ctx.arcTo(x+w, y+h, x, y+h, r);
+				ctx.arcTo(x, y+h, x, y, r);
+				ctx.arcTo(x, y, x+w, y, r);
+				ctx.closePath();
+				ctx.stroke()
+			}
+
+		</script>
+</body>
+</html>
